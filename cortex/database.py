@@ -443,7 +443,7 @@ class Database(object):
                 pass
 
         if name == "identity":
-            nib = self.get_anat(subject, 'raw')
+            nib = self.get_anat(subject, type='raw')
             return Transform(np.linalg.inv(nib.get_affine()), nib)
 
         fname = os.path.join(self.filestore, subject, "transforms", name, "matrices.xfm")

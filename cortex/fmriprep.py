@@ -9,6 +9,7 @@ def import_subj(subject,
                 session=None,
                 dataset=None,
                 sname=None,
+                acq=None,
                 old_fmriprep=False):
     """Imports a subject from fmriprep-output.
     See https://fmriprep.readthedocs.io/en/stable/
@@ -25,6 +26,8 @@ def import_subj(subject,
     dataset : string, optional
        If you have multiple fmriprep outputs from different datasets, use this attribute
        to add a prefix to every subject id ('ds01.01' rather than '01')
+    acq : string, optional
+        If we intend to specific the acquisition 
     sname : string, optional
         Pycortex subject name (These variable names should be changed). By default uses
         the same name as the freesurfer subject.
@@ -44,7 +47,7 @@ def import_subj(subject,
     anats = op.join(database.default_filestore, sname, "anatomicals", "{name}.nii.gz")
     surfinfo = op.join(database.default_filestore, sname, "surface-info", "{name}.npz")
 
-    fmriprep_dir = op.join(source_dir, 'fmriprep')
+    fmriprep_dir = op.join(source_dir, 'fmriprep', 'sub-{subject}')
     if session is not None:
         fmriprep_dir = op.join(fmriprep_dir, 'ses-{session}')
         session_str = '_ses-{session}'.format(session=session)
@@ -52,17 +55,22 @@ def import_subj(subject,
         session_str = ''
 
     # import anatomical data
-    fmriprep_dir = op.join(fmriprep_dir, 'sub-{subject}', 'anat')
+    fmriprep_dir = op.join(fmriprep_dir, 'anat')
+
+    if acq is not None:
+        acq_str = '_acq-{acq}'.format(acq=acq)
+    else:
+        acq_str = ''
 
     if old_fmriprep:
-        t1w = op.join(fmriprep_dir, 'sub-{subject}{session_str}_T1w_preproc.nii.gz')
-        aseg = op.join(fmriprep_dir, 'sub-{subject}{session_str}_T1w_label-aseg_roi.nii.gz')
+        t1w = op.join(fmriprep_dir, 'sub-{subject}{session_str}{acq_str}_T1w_preproc.nii.gz')
+        aseg = op.join(fmriprep_dir, 'sub-{subject}{session_str}{acq_str}_T1w_label-aseg_roi.nii.gz')
     else:
-        t1w = op.join(fmriprep_dir, 'sub-{subject}{session_str}_desc-preproc_T1w.nii.gz')
-        aseg = op.join(fmriprep_dir, 'sub-{subject}{session_str}_desc-aseg_dseg.nii.gz')
+        t1w = op.join(fmriprep_dir, 'sub-{subject}{session_str}{acq_str}_desc-preproc_T1w.nii.gz')
+        aseg = op.join(fmriprep_dir, 'sub-{subject}{session_str}{acq_str}_desc-aseg_dseg.nii.gz')
 
-    for fmp_fn, out_fn in zip([t1w.format(subject=subject, session_str=session_str),
-                               aseg.format(subject=subject, session_str=session_str)],
+    for fmp_fn, out_fn in zip([t1w.format(subject=subject, session=session, session_str=session_str, acq_str=acq_str),
+                               aseg.format(subject=subject, session=session, session_str=session_str, acq_str=acq_str)],
                               [anats.format(name='raw'),
                                anats.format(name='aseg')]):
         shutil.copy(fmp_fn, out_fn)
@@ -71,13 +79,17 @@ def import_subj(subject,
     #import surfaces
     if old_fmriprep:
         fmpsurf = op.join(fmriprep_dir, 
-                          'sub-{subject}{session_str}_T1w_').format(subject=subject,
-                                                                    session_str=session_str)
+                          'sub-{subject}{session_str}{acq_str}_T1w_').format(subject=subject,
+                                                                    session=session,
+                                                                    session_str=session_str,
+                                                                    acq_str=acq_str)
         fmpsurf = fmpsurf + '{fmpname}.{fmphemi}.surf.gii'
     else:
         fmpsurf = op.join(fmriprep_dir, 
-                          'sub-{subject}{session_str}_').format(subject=subject,
-                                                                    session_str=session_str)
+                          'sub-{subject}{session_str}{acq_str}_').format(subject=subject,
+                                                                    session=session,
+                                                                    session_str=session_str,
+                                                                    acq_str=acq_str)
         fmpsurf = fmpsurf + 'hemi-{fmphemi}_{fmpname}.surf.gii'
 
     for fmpname, name in zip(['smoothwm', 'pial', 'midthickness', 'inflated'],
