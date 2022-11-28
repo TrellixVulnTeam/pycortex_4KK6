@@ -1035,7 +1035,26 @@ def download_subject(subject_id='fsaverage', url=None, pycortex_store=None,
     pycortex_store = os.path.expanduser(pycortex_store)
     with tarfile.open(os.path.join(tmp_dir, subject_id + '.tar.gz'), "r:gz") as tar:
         print("Extracting subject {} to {}".format(subject_id, pycortex_store))
-        tar.extractall(path=pycortex_store)
+        def is_within_directory(directory, target):
+            
+            abs_directory = os.path.abspath(directory)
+            abs_target = os.path.abspath(target)
+        
+            prefix = os.path.commonprefix([abs_directory, abs_target])
+            
+            return prefix == abs_directory
+        
+        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+        
+            for member in tar.getmembers():
+                member_path = os.path.join(path, member.name)
+                if not is_within_directory(path, member_path):
+                    raise Exception("Attempted Path Traversal in Tar File")
+        
+            tar.extractall(path, members, numeric_owner=numeric_owner) 
+            
+        
+        safe_extract(tar, path=pycortex_store)
 
 
 def rotate_flatmap(surf_id, theta, plot=False):
